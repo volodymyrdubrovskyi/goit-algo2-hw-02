@@ -35,6 +35,7 @@ def organize_batches(sorted_jobs: List[Dict], constraints: Dict) -> List[List[Di
 def calculate_total_time(batches: List[List[Dict]]) -> int:
     total_time = 0
     for batch in batches:
+        # print(batch)
         batch_time = max(job['print_time'] for job in batch)
         total_time += batch_time
     return total_time
