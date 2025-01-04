@@ -13,6 +13,32 @@ class PrinterConstraints:
     max_volume: float
     max_items: int
 
+def organize_batches(sorted_jobs: List[Dict], constraints: Dict) -> List[List[Dict]]:
+    batches = []
+    current_batch = []
+    current_volume = 0
+    
+    for job in sorted_jobs:
+        if current_volume + job['volume'] <= constraints['max_volume'] and len(current_batch) < constraints['max_items']:
+            current_batch.append(job)
+            current_volume += job['volume']
+        else:
+            batches.append(current_batch)
+            current_batch = [job]
+            current_volume = job['volume']
+    
+    if current_batch:
+        batches.append(current_batch)
+    
+    return batches
+
+def calculate_total_time(batches: List[List[Dict]]) -> int:
+    total_time = 0
+    for batch in batches:
+        batch_time = max(job['print_time'] for job in batch)
+        total_time += batch_time
+    return total_time
+
 def optimize_printing(print_jobs: List[Dict], constraints: Dict) -> Dict:
     """
     Оптимізує чергу 3D-друку згідно з пріоритетами та обмеженнями принтера
@@ -26,29 +52,15 @@ def optimize_printing(print_jobs: List[Dict], constraints: Dict) -> Dict:
     """
     # Сортуємо завдання за пріоритетом (від найвищого до найнижчого)
     sorted_jobs = sorted(print_jobs, key=lambda job: (job['priority'], job['volume']))
-
-    total_volume = 0
-    total_time = 0
-    print_order = []
-    current_batch = []
-    current_batch_time = 0
-
-    for job in sorted_jobs:
-        if total_volume + job['volume'] <= constraints['max_volume'] and len(current_batch) < constraints['max_items']:
-            print_order.append(job['id'])
-            current_batch.append(job)
-            total_volume += job['volume']
-            current_batch_time = max(current_batch_time, job['print_time'])
-        else:
-            total_time += current_batch_time
-            total_volume = job['volume']
-            current_batch = [job]
-            current_batch_time = job['print_time']
-            print_order.append(job['id'])
     
-    # Додаємо час друку останньої партії
-    if current_batch:
-        total_time += current_batch_time
+    # Організуємо групи друку
+    batches = organize_batches(sorted_jobs, constraints)
+    
+    # Обчислюємо загальний час друку
+    total_time = calculate_total_time(batches)
+    
+    # Формуємо порядок друку
+    print_order = [job['id'] for batch in batches for job in batch]
 
     return {
         "print_order": print_order,
